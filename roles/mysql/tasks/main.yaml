@@ -1,0 +1,72 @@
+---
+
+    - name: Mysql | Set root password
+      #debconf: name='mysql-server' question='mysql-server/root_password' value="{{ mysql_pass | quote }}" vtype='password'
+      debconf: name={{ item }} question='mysql-server/root_password' value="{{ mysql_pass | quote }}" vtype='password'
+      #shell: debconf-set-selections <<< 'mysql-server mysql-server/root_password password {{ mysql_pass }}'
+      with_items: 
+        - mariadb-server-5.5
+        - mysql-server-5.5
+        - python-mysql
+      when: ansible_distribution_version == "14.04"
+
+    - name: Mysql | Set root repassword
+      debconf: name={{ item }} question='mysql-server/root_password_again' value="{{ mysql_pass | quote }}" vtype='password'
+      with_items:
+        - mariadb-server-5.5
+        - mysql-server-5.5
+      when: ansible_distribution_version == "14.04"
+
+
+    - name: Install mariadb
+      apt: package={{ item }} state=installed force=yes update_cache=yes cache_valid_time=3600
+      when: ansible_os_family == 'Debian'
+      with_items:
+        - mariadb-server-5.5
+        - mariadb-client-5.5
+      when: ansible_distribution_version == "14.04"
+ 
+    - name: Setting up the mysql my.cnf file
+      shell: sed -r -i 's/127\.0\.0\.1/0\.0\.0\.0/' /etc/mysql/my.cnf
+
+
+    # - name: Setting up the my.cnf file
+    #   shell: echo {{ item }}
+    #   with_items:
+    #     - '"[client]" > /root/.my.cnf'
+    #     - '"user={{ mysql_user }}" >> /root/.my.cnf'
+    #     - '"password={{ mysql_pass }}" >> /root/.my.cnf'
+
+    - name: Setting up the my.cnf file
+      template: src=roles/mysql/templates/my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+
+    - name: Enable and restart mysql service
+      service:
+        name: mysql
+        enabled: yes
+
+    - name: Setting up the root user on mysql
+      mysql_user:
+        name: "{{ mysql_user }}"
+        password: "{{ mysql_pass }}"
+        priv: '*.*:ALL'
+        state: present
+
+    # - name: Set root Password
+    #   mysql_user: name=root host={{ item }} password={{ mysql_root_password }} state=present
+    #   with_items:
+    #     - localhost
+    #     - 127.0.0.1
+    #     - ::1
+
+
+    - name: Reload privilege tables
+      command: 'mysql -ne "{{ item }}"'
+      with_items:
+        - FLUSH PRIVILEGES
+      changed_when: False
+
+
+
+
+

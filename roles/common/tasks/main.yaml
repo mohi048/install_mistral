@@ -1,0 +1,57 @@
+---
+
+    - name: "Installing required packages to the system"
+      apt: name={{ item }} state=present update_cache=yes
+      with_items:
+         - python-dev
+         - python-setuptools
+         - python-pip
+         - libffi-dev
+         - libxslt1-dev
+         - libxml2-dev 
+         - libyaml-dev
+         - libssl-dev
+         - libmysqlclient-dev
+
+    - name: "Upgrading pip to latest version"
+      shell: pip install --upgrade pip
+
+    - name: "Upgrading setup tools to latest version"
+      shell: pip install --upgrade setuptools
+
+    - name: Check if mysql-server is installed
+      #command: dpkg-query -l mariadb-server
+      command: dpkg-query -l dd
+      ignore_errors: True
+      register: deb_check_mysql
+
+
+    - name: "Upgrading python mysql connector"
+      shell: pip install mysql-python
+
+
+    - name: Execute script if mysql-server is not installed
+      include: roles/mysql/tasks/main.yaml
+      when: deb_check_mysql|failed
+
+
+
+
+    - name: "Creating database for mistral..."
+      mysql_db: name={{ DBNAME }} state=present
+
+
+    - name: "Creating MYSQL user and password to access the database mistral ..."
+      mysql_user: name={{ USERNAME }} password={{ MISTRAL_DBPASS }} priv={{ DBNAME }}.*:ALL host={{ item }} state=present
+      with_items:
+         - localhost
+         - '%'
+         - "{{ IP_SERVER }}"
+
+
+    - name: "Cloning git repository"
+      git: repo=https://git.openstack.org/openstack/mistral.git dest=/home/stack version={{ mistral_git_branch }}
+
+
+   
+      

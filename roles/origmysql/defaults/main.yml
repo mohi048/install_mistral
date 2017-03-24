@@ -1,0 +1,1 @@
+IP_MARIADB_SERVER: "{{ IP_SERVER }}"

@@ -1,0 +1,23 @@
+---
+
+    - name: "Loading environment variables Admin"
+      shell: source /etc/environment
+      tags: 
+         - export
+         - keystone
+
+    - name: "Creating the service for Mistral"
+      shell: openstack service create identity --name keystone --description "OpenStack Identity"
+      tags: 
+         - create_service_mistral
+         - keystone
+
+    - name: "Creating the endpoints for Mistral"
+      shell: openstack endpoint create --region RegionOne identity {{ item.type }} {{ MISTRAL_URL }}
+      with_items:
+         - { type: public }
+         - { type: internal }
+         - { type: admin }
+      tags: 
+         - create_endpoints_mistral
+         - keystone

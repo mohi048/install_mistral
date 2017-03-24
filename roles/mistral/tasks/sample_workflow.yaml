@@ -1,0 +1,54 @@
+version: '2.0'
+
+create_vm:
+  description: Simple workflow example
+  type: direct
+  input:
+    - vm_name
+    - image_ref
+    - flavor_ref
+    - private_net_id
+    - username
+    - password
+  output:
+    vm_id: <% $.vm_id %>
+
+  tasks:
+
+    create_server:
+      action: nova.servers_create
+      input:
+        name: <% $.vm_name %>
+        image: <% $.image_ref %>
+        flavor: <% $.flavor_ref %>
+        nics: [ "net-id": <% $.private_net_id %> ]
+      publish:
+        vm_id: <% $.create_server.id %>
+      on-success:
+        - wait_for_instance
+
+    wait_for_instance:
+      action: nova.servers_find id=<% $.vm_id %> status='ACTIVE'
+      #action: nova.servers_interface_list server=<% $.vm_id %>
+      retry:
+        delay: 5
+        count: 15
+      on-success:
+        - get_interface_list
+
+    get_interface_list:
+      action : nova.servers_interface_list server=<% $.vm_id %>
+      publish:
+        interface_list: <% $.get_interface_list %>
+      on-success : ssh_to_machine
+
+    ssh_to_machine:
+      with-items: vm in <% $.interface_list %>
+      action: std.ssh
+      input:
+         cmd: "echo 1 > /tmp/testing"
+         host: <% $.vm.fixed_ips.ip_address %>
+         username:  <% $.username %>
+         password: <% $.password %>
+      publish:
+         res: <% $.ssh_to_machine %>

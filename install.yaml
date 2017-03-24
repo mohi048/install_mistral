@@ -1,0 +1,12 @@
+---
+  - hosts: mistral_server
+    user: root
+    roles:
+        - common
+    sudo: yes
+    vars:
+      mysql_user: root
+      mysql_pass: P@ssw0rd
+      IP_SERVER: 192.168.56.101
+
+

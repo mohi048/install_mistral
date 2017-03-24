@@ -1,0 +1,46 @@
+---
+    - name: "Checking out the ubuntu version"
+      debug:
+        var: "{{ ansible_distribution }}"
+
+    - name: "Checking out the ubuntu version"
+      debug:
+        var: "{{ ansible_distribution_version }}"
+
+    - name: "Installing MariaDB apt key as ubuntu  {{ ansible_distribution_version }} found..."
+      #shell: apt-key adv --recv-keys –keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
+      apt_key: keyserver=hkp://keyserver.ubuntu.com:80 id=0xcbcb082a1bb943db state=present
+      when: ansible_distribution_version == "14.04"
+
+    - name: "Installing MariaDB Repo as ubuntu  {{ ansible_distribution_version }} found..."
+      apt_repository:
+        repo: deb http://mirror.jmu.edu/pub/mariadb/repo/10.1/ubuntu trusty main
+        state: present
+      when: ansible_distribution_version == "14.04"
+
+    # - name: "Installing MariaDB apt key as ubuntu  {{ ansible_distribution_version }} found..."
+    #   shell: echo "deb http://mirror.jmu.edu/pub/mariadb/repo/10.1/ubuntu trusty main" > /etc/apt/sources.list.d/db.list
+    #   when: ansible_distribution_version == "14.04"
+
+    # - name: "Installing MariaDB apt key as ubuntu  {{ ansible_distribution_version }} found..."
+    #   shell: echo "deb-src http://mirror.jmu.edu/pub/mariadb/repo/10.1/ubuntu trusty main" >> /etc/apt/sources.list.d/db.list
+    #   when: ansible_distribution_version == "14.04"
+
+
+
+    - name: "Installing MariaDB Packages ..."
+      apt: name={{ item }} state=present update_cache=yes
+      with_items:
+          - mariadb-server
+      tags: installmariadb
+
+    - name: "Creating configuration file for MariaDB ..."
+      shell: touch /root/.my.cnf
+
+    - name: "wRITING configuration file for MariaDB ..."
+      template: src=tasmariadb_openstack.cnf.j2 dest=/root/.my.cnf
+      tags: mariadbconf
+
+    - name: "Enabling and starting MariaDB service ..."
+      service: name=mariadb state=restarted enabled=yes 
+      tags: startmariadb
